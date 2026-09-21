@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#07090e">
+    <meta name="description" content="Zero-install, 100% private, client-side Optical Heart Rate (PPG) and HRV Monitor">
+    <title>OpenPulse - Optical Heart Rate & HRV Monitor</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫀</text></svg>">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-group">
+                <span class="heart-pulse-icon" id="headerHeartIcon">🫀</span>
+                <div class="title-meta">
+                    <h1 class="app-title">OpenPulse</h1>
+                    <span class="app-version">v1.0 • Client-Side PPG & HRV</span>
+                </div>
+            </div>
+            <div class="header-badges">
+                <button id="audioToggleBtn" class="icon-button" title="Toggle Pulse Audio Chime" aria-label="Toggle Pulse Audio">
+                    <span id="audioIcon">🔇</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard-grid">
+            <!-- Telemetry HUD Card -->
+            <section class="card hud-card" aria-label="Live Heart Rate Metrics">
+                <div class="source-indicator" id="sourceIndicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Ready to start monitor</span>
+                </div>
+
+                <div class="bpm-hero-display">
+                    <span class="bpm-number" id="bpmValue">--</span>
+                    <span class="bpm-label">BPM</span>
+                </div>
+
+                <div class="state-pill" id="statePill">
+                    <span id="stateText">Awaiting Signal</span>
+                </div>
+
+                <!-- Live Metrics Grid -->
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <span class="metric-label">HRV (RMSSD)</span>
+                        <span class="metric-value" id="hrvValue">-- ms</span>
+                        <span class="metric-sub">Autonomic tone</span>
+                    </div>
+                    <div class="metric-box">
+                        <span class="metric-label">Signal Quality</span>
+                        <span class="metric-value" id="qualityValue">--</span>
+                        <span class="metric-sub" id="qualityDetail">No motion</span>
+                    </div>
+                    <div class="metric-box">
+                        <span class="metric-label">Confidence</span>
+                        <span class="metric-value" id="confidenceValue">--%</span>
+                        <span class="metric-sub">SNR Stability</span>
+                    </div>
+                </div>
+
+                <!-- Real-Time Pulse Wave Oscilloscope -->
+                <div class="wave-container">
+                    <div class="wave-header">
+                        <span class="wave-title">Optical PPG Arterial Pulse Wave</span>
+                        <span class="wave-live-tag">LIVE 60 FPS</span>
+                    </div>
+                    <canvas id="oscilloscopeCanvas" width="600" height="120"></canvas>
+                </div>
+
+                <!-- Primary Action Controls -->
+                <div class="controls-row">
+                    <button id="startPpgBtn" class="btn btn-primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        Start Camera PPG
+                    </button>
+                    <button id="stopPpgBtn" class="btn btn-danger" style="display: none;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                        Stop Camera
+                    </button>
+                    <button id="connectBleBtn" class="btn btn-secondary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg>
+                        Bluetooth (BLE)
+                    </button>
+                </div>
+            </section>
+
+            <!-- Session Analytics & Timeline Card -->
+            <section class="card session-card" aria-label="Session Analytics">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Session Telemetry Timeline</h2>
+                        <p class="section-subtitle">Real-time physiological trend and cardiovascular zone analysis</p>
+                    </div>
+                    <div class="session-rec-status">
+                        <span class="rec-dot" id="recDot"></span>
+                        <span id="recStatusText">IDLE</span>
+                    </div>
+                </div>
+
+                <!-- Interactive Timeline Canvas -->
+                <div class="chart-wrapper">
+                    <canvas id="sessionTimelineCanvas" width="600" height="160"></canvas>
+                    <div id="chartTooltip" class="chart-tooltip"></div>
+                </div>
+
+                <!-- Session Aggregate Statistics -->
+                <div class="stats-chip-row">
+                    <div class="stat-chip">
+                        <small>Lowest</small>
+                        <span id="statMinBpm">--</span>
+                    </div>
+                    <div class="stat-chip">
+                        <small>Average</small>
+                        <span id="statAvgBpm">--</span>
+                    </div>
+                    <div class="stat-chip">
+                        <small>Median</small>
+                        <span id="statMedianBpm">--</span>
+                    </div>
+                    <div class="stat-chip">
+                        <small>Peak</small>
+                        <span id="statMaxBpm">--</span>
+                    </div>
+                    <div class="stat-chip">
+                        <small>Duration</small>
+                        <span id="statDuration">0s</span>
+                    </div>
+                </div>
+
+                <!-- Cardiovascular Zones Progress -->
+                <div class="zones-breakdown">
+                    <div class="zone-label-row">
+                        <span>Cardiovascular Zone Distribution</span>
+                        <span id="zoneDominantText">Resting / Baseline</span>
+                    </div>
+                    <div class="zone-bar-track">
+                        <div class="zone-segment zone-rest" id="zoneRestBar" style="width: 20%;" title="Resting (<70 BPM)"></div>
+                        <div class="zone-segment zone-light" id="zoneLightBar" style="width: 20%;" title="Light / Warmup (70-99 BPM)"></div>
+                        <div class="zone-segment zone-aerobic" id="zoneAerobicBar" style="width: 20%;" title="Aerobic (100-129 BPM)"></div>
+                        <div class="zone-segment zone-anaerobic" id="zoneAnaerobicBar" style="width: 20%;" title="Anaerobic (130-159 BPM)"></div>
+                        <div class="zone-segment zone-peak" id="zonePeakBar" style="width: 20%;" title="Peak (>160 BPM)"></div>
+                    </div>
+                    <div class="zone-legend">
+                        <span class="legend-item"><span class="dot rest"></span> Resting</span>
+                        <span class="legend-item"><span class="dot light"></span> Light</span>
+                        <span class="legend-item"><span class="dot aerobic"></span> Aerobic</span>
+                        <span class="legend-item"><span class="dot anaerobic"></span> Anaerobic</span>
+                        <span class="legend-item"><span class="dot peak"></span> Peak</span>
+                    </div>
+                </div>
+
+                <!-- Session Management Controls -->
+                <div class="session-actions-row">
+                    <button id="pauseChartBtn" class="btn btn-sm btn-outline">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                        Pause
+                    </button>
+                    <button id="clearSessionBtn" class="btn btn-sm btn-outline">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Clear
+                    </button>
+                    <button id="exportCsvBtn" class="btn btn-sm btn-action">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export CSV
+                    </button>
+                    <button id="exportJsonBtn" class="btn btn-sm btn-action">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                        Export JSON
+                    </button>
+                    <button id="copyClipboardBtn" class="btn btn-sm btn-action">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copy
+                    </button>
+                </div>
+            </section>
+
+            <!-- Instructions & Placement Guide -->
+            <section class="card guide-card">
+                <details class="guide-details" open>
+                    <summary class="guide-summary">
+                        <span>💡 How to Achieve Maximum Measurement Accuracy</span>
+                        <span class="guide-chevron">▼</span>
+                    </summary>
+                    <div class="guide-content">
+                        <ol class="guide-steps">
+                            <li><strong>Gentle Fingertip Contact</strong>: Rest the fleshy pad of your index finger lightly over the rear camera lens and LED flashlight. Do not press hard—firm pressure blanches blood capillaries and restricts microvascular blood flow.</li>
+                            <li><strong>Stable Hand Position</strong>: Keep your hand relaxed and resting on a table or surface to minimize motion artifacts.</li>
+                            <li><strong>Sensor Warmup</strong>: Allow 3–5 seconds for the optical baseline DC filter to calibrate and stabilize.</li>
+                            <li><strong>Flashlight Control</strong>: On mobile browsers supporting torch constraints (Chrome/Android), the flash turns on automatically. On iOS Safari, ensure ambient lighting is sufficient or toggle your flashlight from Control Center if prompted.</li>
+                        </ol>
+                    </div>
+                </details>
+            </section>
+        </main>
+
+        <!-- Footer & Medical Disclaimer -->
+        <footer class="app-footer">
+            <p class="disclaimer-text">
+                <strong>Medical Disclaimer:</strong> OpenPulse is an open-source educational, fitness, and biofeedback web tool. It is not a certified medical device and is not intended for diagnostic or clinical evaluation.
+            </p>
+            <div class="footer-links">
+                <span>100% Client-Side Open Source • MIT License</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Hidden In-Memory Video & Processing Canvas -->
+    <video id="hiddenVideo" playsinline autoplay muted style="position: absolute; top: -9999px; left: -9999px; width: 32px; height: 32px; opacity: 0; pointer-events: none;"></video>
+    <canvas id="procCanvas" width="32" height="32" style="display: none;"></canvas>
+
+    <!-- Toast Notification Banner -->
+    <div id="toastNotification" class="toast-notification"></div>
+
+    <script src="app.js"></script>
+    <script>
+        // Register Service Worker for Offline PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch((err) => {
+                    console.log('ServiceWorker registration skipped:', err.message);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
