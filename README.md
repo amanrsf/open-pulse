@@ -8,6 +8,8 @@
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20In--Memory%20Local-ff3366)](https://github.com)
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero%20(Vanilla%20JS)-purple)](https://github.com)
 
+https://amanrsf.github.io/open-pulse/
+
 ---
 
 ## Highlights
